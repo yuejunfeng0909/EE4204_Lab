@@ -2,8 +2,8 @@
 
 // transmit data
 float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len);
-//calcu the time interval between out and in
-void calc_interval(struct timeval *out, struct timeval *in);
+//calcu the time interval between end_time and in
+void calc_interval(struct timeval *end_time, struct timeval *start_time);
 
 int main(int argc, char **argv)
 {
@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	// get the host's alternative names
 	// TODO: find out what this is
 	char ** pptr;
-	for (pptr=socket_host->h_aliases; *pptr != NULL; pptr++)
+	for (pptr = socket_host->h_aliases; *pptr != NULL; pptr++)
 		printf("the aliases name is: %s\n", *pptr);
 	
 	// print address type
@@ -95,8 +95,6 @@ int main(int argc, char **argv)
 
 float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 {
-	float time_inv = 0.0;
-
 	// get the file size
 	fseek(file_transmitted, 0, SEEK_END); // go to the end of the file
 	long file_size = ftell (file_transmitted); // get file size
@@ -145,7 +143,7 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 
 	// receive acknowledgement
 	struct ack_so ack;
-	if ((transmission_status = recv(socket_descriptor, &ack, 2, 0))==-1)                                   //receive the ack
+	if ((transmission_status = recv(socket_descriptor, &ack, 2, 0)) == -1)                                   //receive the ack
 	{
 		printf("error when receiving\n");
 		exit(1);
@@ -158,21 +156,21 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 	// compute the time interval
 	gettimeofday(&transmission_end_time, NULL);
 	calc_interval(&transmission_end_time, &transmission_start_time);                                                                 // get the whole trans time
-	time_inv += (transmission_end_time.tv_sec)*1000.0 + (transmission_end_time.tv_usec)/1000.0;
+	float transmission_time = (transmission_end_time.tv_sec)*1000.0 + (transmission_end_time.tv_usec)/1000.0;
 	
 	// update the number of bytes sent
 	*len= character_index;
 
-	return(time_inv);
+	return(transmission_time);
 }
 
-void calc_interval(struct  timeval *out, struct timeval *in)
+void calc_interval(struct  timeval *end_time, struct timeval *start_time)
 {
 	// if the microsecond difference is negative, borrow from seconds
-	if ((out->tv_usec -= in->tv_usec) <0)
+	if ((end_time->tv_usec -= start_time->tv_usec) <0)
 	{
-		--out ->tv_sec;
-		out ->tv_usec += 1000000;
+		--end_time ->tv_sec;
+		end_time ->tv_usec += 1000000;
 	}
-	out->tv_sec -= in->tv_sec;
+	end_time->tv_sec -= start_time->tv_sec;
 }
