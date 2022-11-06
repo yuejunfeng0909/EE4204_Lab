@@ -71,7 +71,6 @@ int main(int argc, char **argv)
 
 	close(sockfd);
 	fclose(fp);
-//}
 	exit(0);
 }
 
@@ -93,7 +92,7 @@ float str_cli(FILE *fp, int sockfd, long *len)
 	printf("the packet length is %d bytes\n",DATALEN);
 
 // allocate memory to contain the whole file.
-	buf = (char *) malloc (lsize);
+	buf = (char *) malloc (lsize+1);
 	if (buf == NULL) exit (2);
 
   // copy the file into the buffer.

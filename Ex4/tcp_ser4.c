@@ -26,11 +26,11 @@ int main(void)
 		exit(1);
 	}
 	
-	my_addr.sin_family = AF_INET;
-	my_addr.sin_port = htons(MYTCP_PORT);
-	my_addr.sin_addr.s_addr = htonl(INADDR_ANY);//inet_addr("172.0.0.1");
-	bzero(&(my_addr.sin_zero), 8);
-	ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));                //bind socket
+	my_addr.sin_family = AF_INET; 																// IPv4 protocol
+	my_addr.sin_port = htons(MYTCP_PORT); 														// change the byte order from host to network (short host) (e.g. big endian to small endian)
+	my_addr.sin_addr.s_addr = htonl(INADDR_ANY); 												// change the byte order from host to network (long host) (e.g. big endian to small endian)
+	bzero(&(my_addr.sin_zero), 8); 																// set the rest of the struct to 0
+	ret = bind(sockfd, (struct sockaddr *) &my_addr, sizeof(struct sockaddr));                	//bind socket
 	if (ret <0)
 	{
 		printf("error in binding");
