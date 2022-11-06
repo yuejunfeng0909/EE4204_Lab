@@ -18,8 +18,13 @@
 #define MYUDP_PORT 5350
 #define DATALEN 500
 #define BUFSIZE 60000
-#define PACKLEN 508
 #define HEADLEN 8
+#define PACKLEN (DATALEN+HEADLEN)
+
+// batched TCP ack
+#define TCP_ACK_BATCH 1
+// #define TCP_ACK_BATCH 2
+// #define TCP_ACK_BATCH 4
 
 struct pack_so			//data packet structure
 {

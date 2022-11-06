@@ -117,6 +117,8 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 	// start transmitting in packets
 	long character_index = 0; // current character index
 	int transmission_status, n_bytes_packet;
+	int jumping_window_remaining = TCP_ACK_BATCH;
+	struct ack_so ack;
 	char sends[DATALEN]; // buffer for the data to be transmitted in each packet
 	while(character_index <= file_size)
 	{
@@ -134,24 +136,30 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 
 		// check if the packet was sent successfully
 		if(transmission_status == -1) {
-			printf("send error!");
+			printf("send error!\n");
 			// TODO: retransmission?
 			exit(1);
 		}
 		character_index += n_bytes_packet;
-	}
 
-	// receive acknowledgement
-	struct ack_so ack;
-	if ((transmission_status = recv(socket_descriptor, &ack, 2, 0)) == -1)                                   //receive the ack
-	{
-		printf("error when receiving\n");
-		exit(1);
-	}
+		jumping_window_remaining--;
+		if (jumping_window_remaining == 0 || character_index == file_size) {
+			
+			// wait for acknowledgement
+			if ((transmission_status = recv(socket_descriptor, &ack, 2, 0)) == -1)                                   //receive the ack
+				{
+					printf("error while receiving ack\n");
+					exit(1);
+				}
 
-	// check acknowledgement
-	if (ack.num != 1|| ack.len != 0)
-		printf("error in transmission\n");
+			// check acknowledgement
+			if (ack.num != 1|| ack.len != 0)
+				printf("error in transmission\n");
+
+			// restore jumping window back
+			jumping_window_remaining = TCP_ACK_BATCH;
+		}
+	}
 
 	// compute the time interval
 	gettimeofday(&transmission_end_time, NULL);

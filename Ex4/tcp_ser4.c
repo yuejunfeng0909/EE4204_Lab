@@ -84,6 +84,10 @@ void str_ser(int socket_descriptor)
 	char packet_buffer[DATALEN];
 	int transmission_finished = 0, packet_bytes_received = 0;
 	long total_received_bytes=0;
+	struct ack_so ack;
+	ack.len = 0;
+	int ack_sent_status;
+	int jumping_window_remaining = TCP_ACK_BATCH;
 	
 	printf("receiving data!\n");
 
@@ -92,6 +96,10 @@ void str_ser(int socket_descriptor)
 		if ((packet_bytes_received= recv(socket_descriptor, &packet_buffer, DATALEN, 0))==-1)                                   //receive the packet
 		{
 			printf("error while receiving packet\n");
+
+			// send error ack
+			ack.num = 0;
+			packet_bytes_received = send(socket_descriptor, &ack, 2, 0);
 			exit(1);
 		}
 		if (packet_buffer[packet_bytes_received-1] == '\0') // if it is the end of the file
@@ -100,18 +108,20 @@ void str_ser(int socket_descriptor)
 			packet_bytes_received--;
 		}
 		memcpy((total_received_buffer+total_received_bytes), packet_buffer, packet_bytes_received);
+		jumping_window_remaining--;
+		if (jumping_window_remaining == 0 || transmission_finished)
+		{
+			// send success ack
+			ack.num = 1;
+			ack_sent_status = send(socket_descriptor, &ack, 2, 0);
+			if (ack_sent_status == -1)
+			{
+				printf("success ack send error!\n"); //send the ack
+				exit(1);
+			}
+			jumping_window_remaining = TCP_ACK_BATCH;
+		}
 		total_received_bytes += packet_bytes_received;
-	}
-
-	// prep ack packet
-	struct ack_so ack;
-	ack.num = 1;
-	ack.len = 0;
-	packet_bytes_received = send(socket_descriptor, &ack, 2, 0);
-	if (packet_bytes_received == -1)
-	{
-		printf("send error!\n"); //send the ack
-		exit(1);
 	}
 
 	// write the received data into a file
