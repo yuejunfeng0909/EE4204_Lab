@@ -51,17 +51,6 @@ int main(int argc, char **argv) // host_name, data_unit_size, batch_ack_size
 	struct in_addr **host_address;
 	host_address = (struct in_addr **)socket_host->h_addr_list;
 
-	// create the socket
-	int socket_descriptor;
-	socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
-
-	// check if socket creation was successful
-	if (socket_descriptor <0)
-	{
-		printf("error in socket\n");
-		exit(1);
-	}
-
 	// socket configuration
 	struct sockaddr_in communication_socket;
 	communication_socket.sin_family = AF_INET; // set the address type to IPv4                                                  
@@ -69,17 +58,11 @@ int main(int argc, char **argv) // host_name, data_unit_size, batch_ack_size
 	memcpy(&(communication_socket.sin_addr.s_addr), *host_address, sizeof(struct in_addr)); // set the host's IP address
 	bzero(&(communication_socket.sin_zero), 8); // researved for system use
 
-	// setup socket connection
-	int socket_connection_status;
-	socket_connection_status = connect(socket_descriptor, (struct sockaddr *)&communication_socket, sizeof(struct sockaddr)); // connect the socket with the host
-	
-	// disconnect if connection failed
-	if (socket_connection_status != 0) {
-		printf ("connection failed\n"); 
-		close(socket_descriptor); 
-		exit(1);
-	}
-	
+	// transmit the file and calculate the time interval
+	int repeat_time = 50;
+	float time_interval, throughput, averaged_throughput = 0, average_time_interval = 0;
+	long file_size_transmitted;
+
 	FILE *file_transmitted;
 	// read the file to be transmitted
 	if((file_transmitted = fopen ("myfile.txt","r+t")) == NULL)
@@ -88,15 +71,44 @@ int main(int argc, char **argv) // host_name, data_unit_size, batch_ack_size
 		exit(0);
 	}
 
-	// transmit the file and calculate the time interval
-	float time_interval, throughput;
-	long file_size;
-	time_interval = transmit_file(file_transmitted, socket_descriptor, &file_size);                       //perform the transmission and receiving
-	throughput = (file_size/(float)time_interval);                                         //caculate the average transmission rate
-	printf("Time(ms) : %.3f, Data sent(byte): %d\nData rate: %f (Kbytes/s)\n", time_interval, (int)file_size, throughput);
+	// transmit the file 10 times
+	for (int i = 0; i < repeat_time; i++) {
+		// create the socket
+		int socket_descriptor;
+		socket_descriptor = socket(AF_INET, SOCK_STREAM, 0);
 
-	// close the socket and file
-	close(socket_descriptor);
+		// check if socket creation was successful
+		if (socket_descriptor <0)
+		{
+			printf("error in socket\n");
+			exit(1);
+		}
+
+		// setup socket connection
+		int socket_connection_status;
+		socket_connection_status = connect(socket_descriptor, (struct sockaddr *)&communication_socket, sizeof(struct sockaddr)); // connect the socket with the host
+		
+		// disconnect if connection failed
+		if (socket_connection_status != 0) {
+			printf ("connection failed\n"); 
+			close(socket_descriptor); 
+			exit(1);
+		}
+
+		time_interval = transmit_file(file_transmitted, socket_descriptor, &file_size_transmitted);
+		throughput = file_size_transmitted / time_interval;
+		printf("Time(ms) : %.3f, Data sent(byte): %d, Data rate: %.3f (Kbytes/s)\n", time_interval, (int)file_size_transmitted, throughput);
+
+		close(socket_descriptor);
+
+		averaged_throughput += throughput / repeat_time;
+		average_time_interval += time_interval / repeat_time;
+	}
+
+	printf("Average throughput: %f\n", averaged_throughput);
+	printf("Average time interval: %f\n", average_time_interval);
+
+	// close the file
 	fclose(file_transmitted);
 	exit(0); // end of transmission
 }
@@ -107,8 +119,8 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 	fseek(file_transmitted, 0, SEEK_END); // go to the end of the file
 	long file_size = ftell (file_transmitted); // get file size
 	rewind(file_transmitted); // reset the file pointer to the beginning of the file
-	printf("The file length is %d bytes\n", (int)file_size);
-	printf("the packet length is %d bytes\n", data_unit_size);
+	// printf("The file length is %d bytes\n", (int)file_size);
+	// printf("the packet length is %d bytes\n", data_unit_size);
 
 	// allocate memory and read the file
 	char *buffer = (char*)malloc(file_size+1);
@@ -138,6 +150,7 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 		
 		// load the data into the packet
 		memcpy(sends, (buffer+character_index), n_bytes_packet);
+		// printf("transmit progress: %d/%d\n", (int)character_index, (int)file_size);
 
 		// send the packet
 		transmission_status = send(socket_descriptor, &sends, n_bytes_packet, 0);

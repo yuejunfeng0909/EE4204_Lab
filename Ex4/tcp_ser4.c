@@ -23,7 +23,6 @@ int main(int argc, char **argv) // data_unit_size, batch_ack_size
 	// set batch ack size
 	batch_ack_size = atoi(argv[2]);
 
-
 	struct sockaddr_in server_addr, client_addr;
 
 	// prepare the socket
