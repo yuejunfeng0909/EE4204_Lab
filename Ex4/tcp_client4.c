@@ -1,23 +1,31 @@
 #include "headsock.h"
 
+int data_unit_size, batch_ack_size;
+
 // transmit data
 float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len);
 //calcu the time interval between end_time and in
 void calc_interval(struct timeval *end_time, struct timeval *start_time);
 
-int main(int argc, char **argv)
+int main(int argc, char **argv) // host_name, data_unit_size, batch_ack_size
 {
-	if (argc != 2) {
-		printf("parameters not match");
+	if (argc != 4) {
+		printf("parameters not match\n");
 	}
 
 	// get host's information
 	struct hostent *socket_host;
 	socket_host = gethostbyname(argv[1]);
 	if (socket_host == NULL) {
-		printf("error when gethostby name");
+		printf("error when gethostby name\n");
 		exit(0);
 	}
+
+	// set data unit size
+	data_unit_size = atoi(argv[2]);
+
+	// set batch ack size
+	batch_ack_size = atoi(argv[3]);
 
 	// print the remote host's information
 	printf("host name: %s\n", socket_host->h_name); 
@@ -50,7 +58,7 @@ int main(int argc, char **argv)
 	// check if socket creation was successful
 	if (socket_descriptor <0)
 	{
-		printf("error in socket");
+		printf("error in socket\n");
 		exit(1);
 	}
 
@@ -100,7 +108,7 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 	long file_size = ftell (file_transmitted); // get file size
 	rewind(file_transmitted); // reset the file pointer to the beginning of the file
 	printf("The file length is %d bytes\n", (int)file_size);
-	printf("the packet length is %d bytes\n",DATALEN);
+	printf("the packet length is %d bytes\n", data_unit_size);
 
 	// allocate memory and read the file
 	char *buffer = (char*)malloc(file_size+1);
@@ -117,16 +125,16 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 	// start transmitting in packets
 	long character_index = 0; // current character index
 	int transmission_status, n_bytes_packet;
-	int jumping_window_remaining = TCP_ACK_BATCH;
+	int jumping_window_remaining = batch_ack_size;
 	struct ack_so ack;
-	char sends[DATALEN]; // buffer for the data to be transmitted in each packet
+	char sends[data_unit_size]; // buffer for the data to be transmitted in each packet
 	while(character_index <= file_size)
 	{
 		// check if the remaining data is less than the packet size
-		if ((file_size - character_index + 1) <= DATALEN)
+		if ((file_size - character_index + 1) <= data_unit_size)
 			n_bytes_packet = file_size - character_index + 1;
 		else 
-			n_bytes_packet = DATALEN;
+			n_bytes_packet = data_unit_size;
 		
 		// load the data into the packet
 		memcpy(sends, (buffer+character_index), n_bytes_packet);
@@ -157,7 +165,7 @@ float transmit_file(FILE *file_transmitted, int socket_descriptor, long *len)
 				printf("error in transmission\n");
 
 			// restore jumping window back
-			jumping_window_remaining = TCP_ACK_BATCH;
+			jumping_window_remaining = batch_ack_size;
 		}
 	}
 

@@ -4,20 +4,33 @@ tcp_ser.c: the source file of the server in tcp transmission
 
 
 #include "headsock.h"
-
 #define BACKLOG 10
+
+int data_unit_size, batch_ack_size;
 
 void str_ser(int socket_descriptor); // transmitting and receiving function
 
-int main(void)
+int main(int argc, char **argv) // data_unit_size, batch_ack_size
 {
+
+	if (argc != 3) {
+		printf("parameters not match\n");
+	}
+
+	// set data unit size
+	data_unit_size = atoi(argv[1]);
+
+	// set batch ack size
+	batch_ack_size = atoi(argv[2]);
+
+
 	struct sockaddr_in server_addr, client_addr;
 
 	// prepare the socket
 	int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0); //create socket
 	if (socket_descriptor <0)
 	{
-		printf("error in socket!");
+		printf("error in socket!\n");
 		exit(1);
 	}
 	
@@ -32,7 +45,7 @@ int main(void)
 	socket_binding_success = bind(socket_descriptor, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 	if (socket_binding_success < 0)
 	{
-		printf("error in binding");
+		printf("error in binding\n");
 		exit(1);
 	}
 	
@@ -40,7 +53,7 @@ int main(void)
 	int socket_listening_success;
 	socket_listening_success = listen(socket_descriptor, BACKLOG);
 	if (socket_listening_success < 0) {
-		printf("error in listening");
+		printf("error in listening\n");
 		exit(1);
 	}
 
@@ -81,19 +94,19 @@ int main(void)
 void str_ser(int socket_descriptor)
 {
 	char total_received_buffer[BUFSIZE];
-	char packet_buffer[DATALEN];
+	char packet_buffer[data_unit_size];
 	int transmission_finished = 0, packet_bytes_received = 0;
 	long total_received_bytes=0;
 	struct ack_so ack;
 	ack.len = 0;
 	int ack_sent_status;
-	int jumping_window_remaining = TCP_ACK_BATCH;
+	int jumping_window_remaining = batch_ack_size;
 	
 	printf("receiving data!\n");
 
 	while(!transmission_finished)
 	{
-		if ((packet_bytes_received= recv(socket_descriptor, &packet_buffer, DATALEN, 0))==-1)                                   //receive the packet
+		if ((packet_bytes_received= recv(socket_descriptor, &packet_buffer, data_unit_size, 0))==-1)                                   //receive the packet
 		{
 			printf("error while receiving packet\n");
 
@@ -119,7 +132,7 @@ void str_ser(int socket_descriptor)
 				printf("success ack send error!\n"); //send the ack
 				exit(1);
 			}
-			jumping_window_remaining = TCP_ACK_BATCH;
+			jumping_window_remaining = batch_ack_size;
 		}
 		total_received_bytes += packet_bytes_received;
 	}

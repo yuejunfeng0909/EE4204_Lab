@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "headsock.h": "c",
+        "math.h": "c",
+        "functional": "c"
+    }
+}
