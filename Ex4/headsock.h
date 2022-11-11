@@ -22,7 +22,7 @@
 #define PACKLEN (DATALEN+HEADLEN)
 
 // batched TCP ack
-#define TCP_ACK_BATCH 1
+#define TCP_ACK_BATCH 2
 // #define TCP_ACK_BATCH 2
 // #define TCP_ACK_BATCH 4
 

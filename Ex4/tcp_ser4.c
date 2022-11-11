@@ -17,7 +17,7 @@ int main(void)
 	int socket_descriptor = socket(AF_INET, SOCK_STREAM, 0); //create socket
 	if (socket_descriptor <0)
 	{
-		printf("error in socket!");
+		printf("error in socket!\n");
 		exit(1);
 	}
 	
@@ -32,7 +32,7 @@ int main(void)
 	socket_binding_success = bind(socket_descriptor, (struct sockaddr *) &server_addr, sizeof(struct sockaddr));
 	if (socket_binding_success < 0)
 	{
-		printf("error in binding");
+		printf("error in binding\n");
 		exit(1);
 	}
 	
@@ -40,7 +40,7 @@ int main(void)
 	int socket_listening_success;
 	socket_listening_success = listen(socket_descriptor, BACKLOG);
 	if (socket_listening_success < 0) {
-		printf("error in listening");
+		printf("error in listening\n");
 		exit(1);
 	}
 
@@ -88,6 +88,7 @@ void str_ser(int socket_descriptor)
 	ack.len = 0;
 	int ack_sent_status;
 	int jumping_window_remaining = TCP_ACK_BATCH;
+	int pack_sequence_number = 0;
 	
 	printf("receiving data!\n");
 
@@ -107,6 +108,7 @@ void str_ser(int socket_descriptor)
 			transmission_finished = 1;
 			packet_bytes_received--;
 		}
+		printf("DU %d received\n", pack_sequence_number++);
 		memcpy((total_received_buffer+total_received_bytes), packet_buffer, packet_bytes_received);
 		jumping_window_remaining--;
 		if (jumping_window_remaining == 0 || transmission_finished)
@@ -120,6 +122,7 @@ void str_ser(int socket_descriptor)
 				exit(1);
 			}
 			jumping_window_remaining = TCP_ACK_BATCH;
+			printf("ACK sent\n");
 		}
 		total_received_bytes += packet_bytes_received;
 	}
