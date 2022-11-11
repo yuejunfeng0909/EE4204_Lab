@@ -7,9 +7,11 @@ tcp_ser.c: the source file of the server in tcp transmission
 
 #define BACKLOG 10
 
+int data_len;
+
 void str_ser(int sockfd);                                                        // transmitting and receiving function
 
-int main(void)
+int main(int argc, char **argv)
 {
 	int sockfd, con_fd, ret;
 	struct sockaddr_in my_addr;
@@ -25,6 +27,8 @@ int main(void)
 		printf("error in socket!");
 		exit(1);
 	}
+
+	data_len = atoi(argv[1]);
 	
 	my_addr.sin_family = AF_INET; 																// IPv4 protocol
 	my_addr.sin_port = htons(MYTCP_PORT); 														// change the byte order from host to network (short host) (e.g. big endian to small endian)
@@ -71,7 +75,7 @@ void str_ser(int sockfd)
 {
 	char buf[BUFSIZE];
 	FILE *fp;
-	char recvs[DATALEN];
+	char recvs[data_len];
 	struct ack_so ack;
 	int end, n = 0;
 	long lseek=0;
@@ -81,7 +85,7 @@ void str_ser(int sockfd)
 
 	while(!end)
 	{
-		if ((n= recv(sockfd, &recvs, DATALEN, 0))==-1)                                   //receive the packet
+		if ((n= recv(sockfd, &recvs, data_len, 0))==-1)                                   //receive the packet
 		{
 			printf("error when receiving\n");
 			exit(1);
